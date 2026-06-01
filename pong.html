@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:black;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    overflow:hidden;
+    font-family:monospace;
+}
+
+canvas{
+    border:4px solid white;
+    image-rendering:pixelated;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game" width="1000" height="600"></canvas>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const WIDTH = canvas.width;
+const HEIGHT = canvas.height;
+
+const WIN_SCORE = 11;
+
+const paddleWidth = 15;
+const paddleHeight = 100;
+const paddleSpeed = 8;
+
+const ballSize = 14;
+
+let leftScore = 0;
+let rightScore = 0;
+
+let gameStarted = false;
+let gameOver = false;
+let singlePlayer = true;
+let winner = "";
+
+const keys = {};
+
+const leftPaddle = {
+    x: 30,
+    y: HEIGHT / 2 - paddleHeight / 2
+};
+
+const rightPaddle = {
+    x: WIDTH - 45,
+    y: HEIGHT / 2 - paddleHeight / 2
+};
+
+const ball = {
+    x: WIDTH / 2,
+    y: HEIGHT / 2,
+    vx: 6,
+    vy: 0
+};
+
+function resetBall(direction){
+
+    ball.x = WIDTH / 2;
+    ball.y = HEIGHT / 2;
+
+    const angle =
+        (Math.random() * 2 - 1) *
+        (Math.PI / 4);
+
+    const speed = 6;
+
+    ball.vx =
+        Math.cos(angle) *
+        speed *
+        direction;
+
+    ball.vy =
+        Math.sin(angle) *
+        speed;
+}
+
+document.addEventListener("keydown", e => {
+
+    if(gameOver && e.key === "Enter"){
+
+        gameOver = false;
+        gameStarted = false;
+
+        leftScore = 0;
+        rightScore = 0;
+
+        winner = "";
+
+        return;
+    }
+
+    if(!gameStarted){
+
+        if(e.key === "1"){
+
+            singlePlayer = true;
+            gameStarted = true;
+
+            leftScore = 0;
+            rightScore = 0;
+
+            resetBall(
+                Math.random() > 0.5 ? 1 : -1
+            );
+        }
+
+        if(e.key === "2"){
+
+            singlePlayer = false;
+            gameStarted = true;
+
+            leftScore = 0;
+            rightScore = 0;
+
+            resetBall(
+                Math.random() > 0.5 ? 1 : -1
+            );
+        }
+
+        return;
+    }
+
+    keys[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+function update(){
+
+    if(!gameStarted || gameOver) return;
+
+    if(keys["w"])
+        leftPaddle.y -= paddleSpeed;
+
+    if(keys["s"])
+        leftPaddle.y += paddleSpeed;
+
+    if(singlePlayer){
+
+        const aiSpeed = 5;
+
+        const paddleCenter =
+            rightPaddle.y +
+            paddleHeight / 2;
+
+        if(ball.vx > 0){
+
+            const target =
+                ball.y +
+                ballSize / 2 +
+                (Math.random() * 40 - 20);
+
+            if(paddleCenter < target - 10)
+                rightPaddle.y += aiSpeed;
+
+            if(paddleCenter > target + 10)
+                rightPaddle.y -= aiSpeed;
+        }
+
+    } else {
+
+        if(keys["arrowup"])
+            rightPaddle.y -= paddleSpeed;
+
+        if(keys["arrowdown"])
+            rightPaddle.y += paddleSpeed;
+    }
+
+    leftPaddle.y =
+        Math.max(
+            0,
+            Math.min(
+                HEIGHT - paddleHeight,
+                leftPaddle.y
+            )
+        );
+
+    rightPaddle.y =
+        Math.max(
+            0,
+            Math.min(
+                HEIGHT - paddleHeight,
+                rightPaddle.y
+            )
+        );
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    if(ball.y <= 0){
+
+        ball.y = 0;
+        ball.vy *= -1;
+    }
+
+    if(ball.y + ballSize >= HEIGHT){
+
+        ball.y = HEIGHT - ballSize;
+        ball.vy *= -1;
+    }
+
+    if(
+        ball.x <= leftPaddle.x + paddleWidth &&
+        ball.x + ballSize >= leftPaddle.x &&
+        ball.y + ballSize >= leftPaddle.y &&
+        ball.y <= leftPaddle.y + paddleHeight
+    ){
+
+        const hit =
+            (ball.y + ballSize/2 - leftPaddle.y)
+            / paddleHeight;
+
+        const angle =
+            (hit - 0.5) * 1.5;
+
+        const speed =
+            Math.min(
+                Math.sqrt(
+                    ball.vx * ball.vx +
+                    ball.vy * ball.vy
+                ) + 0.4,
+                16
+            );
+
+        ball.vx =
+            Math.cos(angle) * speed;
+
+        ball.vy =
+            Math.sin(angle) * speed;
+
+        ball.x =
+            leftPaddle.x + paddleWidth;
+    }
+
+    if(
+        ball.x + ballSize >= rightPaddle.x &&
+        ball.x <= rightPaddle.x + paddleWidth &&
+        ball.y + ballSize >= rightPaddle.y &&
+        ball.y <= rightPaddle.y + paddleHeight
+    ){
+
+        const hit =
+            (ball.y + ballSize/2 - rightPaddle.y)
+            / paddleHeight;
+
+        const angle =
+            (hit - 0.5) * 1.5;
+
+        const speed =
+            Math.min(
+                Math.sqrt(
+                    ball.vx * ball.vx +
+                    ball.vy * ball.vy
+                ) + 0.4,
+                16
+            );
+
+        ball.vx =
+            -Math.cos(angle) * speed;
+
+        ball.vy =
+            Math.sin(angle) * speed;
+
+        ball.x =
+            rightPaddle.x - ballSize;
+    }
+
+    if(ball.x < 0){
+
+        rightScore++;
+
+        if(rightScore >= WIN_SCORE){
+
+            gameOver = true;
+
+            winner =
+                singlePlayer
+                ? "Computer Wins!"
+                : "Player 2 Wins!";
+
+        } else {
+
+            resetBall(1);
+        }
+    }
+
+    if(ball.x > WIDTH){
+
+        leftScore++;
+
+        if(leftScore >= WIN_SCORE){
+
+            gameOver = true;
+            winner = "Player 1 Wins!";
+
+        } else {
+
+            resetBall(-1);
+        }
+    }
+}
+
+function drawNet(){
+
+    for(let y = 0; y < HEIGHT; y += 30){
+
+        ctx.fillRect(
+            WIDTH/2 - 3,
+            y,
+            6,
+            18
+        );
+    }
+}
+
+function drawMenu(){
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+
+    ctx.font = "90px monospace";
+    ctx.fillText(
+        "PONG",
+        WIDTH/2,
+        170
+    );
+
+    ctx.font = "36px monospace";
+
+    ctx.fillText(
+        "Press 1 for Single Player",
+        WIDTH/2,
+        310
+    );
+
+    ctx.fillText(
+        "Press 2 for Two Player",
+        WIDTH/2,
+        380
+    );
+
+    ctx.font = "24px monospace";
+
+    ctx.fillText(
+        "First to 11 points wins",
+        WIDTH/2,
+        470
+    );
+}
+
+function drawGame(){
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    ctx.fillStyle = "white";
+
+    drawNet();
+
+    ctx.fillRect(
+        leftPaddle.x,
+        leftPaddle.y,
+        paddleWidth,
+        paddleHeight
+    );
+
+    ctx.fillRect(
+        rightPaddle.x,
+        rightPaddle.y,
+        paddleWidth,
+        paddleHeight
+    );
+
+    ctx.fillRect(
+        ball.x,
+        ball.y,
+        ballSize,
+        ballSize
+    );
+
+    ctx.font = "80px monospace";
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        leftScore,
+        WIDTH/2 - 120,
+        90
+    );
+
+    ctx.fillText(
+        rightScore,
+        WIDTH/2 + 120,
+        90
+    );
+}
+
+function drawGameOver(){
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(
+        0,
+        0,
+        WIDTH,
+        HEIGHT
+    );
+
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+
+    ctx.font = "70px monospace";
+
+    ctx.fillText(
+        winner,
+        WIDTH/2,
+        220
+    );
+
+    ctx.font = "50px monospace";
+
+    ctx.fillText(
+        leftScore + " - " + rightScore,
+        WIDTH/2,
+        320
+    );
+
+    ctx.font = "28px monospace";
+
+    ctx.fillText(
+        "Press ENTER to return to menu",
+        WIDTH/2,
+        450
+    );
+}
+
+function draw(){
+
+    if(!gameStarted){
+
+        drawMenu();
+        return;
+    }
+
+    if(gameOver){
+
+        drawGameOver();
+        return;
+    }
+
+    drawGame();
+}
+
+function gameLoop(){
+
+    update();
+    draw();
+
+    requestAnimationFrame(
+        gameLoop
+    );
+}
+
+gameLoop();
+
+</script>
+
+</body>
+</html>
